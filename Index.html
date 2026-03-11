@@ -3,46 +3,53 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Tool sprinter by caocuong</title>
+<title>SPRINTER</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
 <style>
 
 body{
-font-family:-apple-system,BlinkMacSystemFont;
-background:#0f1220;
-color:white;
 margin:0;
+font-family:-apple-system;
+background:#0c1022;
+color:white;
 }
 
 header{
-background:#ff0033;
-padding:14px;
+background:linear-gradient(90deg,#ff0033,#ff6600);
+padding:15px;
 text-align:center;
-font-weight:bold;
+font-size:22px;
+}
+
+.creator{
+font-size:12px;
+opacity:0.8;
 }
 
 .container{
-padding:12px;
-max-width:700px;
+max-width:800px;
 margin:auto;
+padding:10px;
 }
 
 .card{
-background:#181c2f;
+background:#161a33;
 padding:12px;
 border-radius:12px;
 margin-bottom:12px;
 }
 
 input,select,button{
-padding:9px;
-margin:4px;
-border:none;
+padding:10px;
 border-radius:8px;
+border:none;
+margin:4px;
 }
 
 button{
@@ -50,20 +57,45 @@ background:#ff0033;
 color:white;
 }
 
-.shop{
-background:#10142a;
-padding:8px;
-border-radius:8px;
-margin-top:8px;
+.tab{
+display:inline-block;
+background:#1c2147;
+padding:10px;
+margin:4px;
+border-radius:6px;
+cursor:pointer;
 }
 
 .order{
-background:#0c1022;
-padding:6px;
-margin-top:5px;
-border-radius:6px;
 display:flex;
 justify-content:space-between;
+background:#070a18;
+padding:6px;
+margin-top:4px;
+border-radius:6px;
+}
+
+.stat{
+display:flex;
+justify-content:space-around;
+font-size:18px;
+}
+
+#reader{
+width:100%;
+}
+
+.shop{
+display:flex;
+align-items:center;
+margin-top:4px;
+}
+
+.shop img{
+width:30px;
+height:30px;
+border-radius:6px;
+margin-right:8px;
 }
 
 </style>
@@ -72,25 +104,53 @@ justify-content:space-between;
 
 <body>
 
-<header>Shipper PRO MAX</header>
+<header>
+
+SPRINTER
+
+<div class="creator">
+Tool by Cao Cường
+</div>
+
+</header>
 
 <div class="container">
 
-<div class="card">
+<div>
 
-<h3>📷 Quét đơn</h3>
-
-<div id="reader"></div>
+<span class="tab" onclick="showTab('dashboard')">Dashboard</span>
+<span class="tab" onclick="showTab('pickup')">Pickup</span>
+<span class="tab" onclick="showTab('shops')">Shop</span>
+<span class="tab" onclick="showTab('create')">QR / Barcode</span>
+<span class="tab" onclick="showTab('logs')">Lịch sử</span>
 
 </div>
 
+<div id="dashboard">
+
 <div class="card">
 
-<h3>🏪 Thêm shop</h3>
+<h3>📊 Thống kê hôm nay</h3>
 
-<input id="shopName" placeholder="Tên shop">
+<div class="stat">
 
-<button onclick="addShop()">Thêm</button>
+<div>Tổng<br><span id="total">0</span></div>
+<div>Đã lấy<br><span id="done">0</span></div>
+<div>Shop<br><span id="shopCount">0</span></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div id="pickup" style="display:none">
+
+<div class="card">
+
+<h3>📷 Scan vận đơn</h3>
+
+<div id="reader"></div>
 
 </div>
 
@@ -100,7 +160,7 @@ justify-content:space-between;
 
 <select id="shopSelect"></select>
 
-<input id="orderCode" placeholder="Mã vận đơn">
+<input id="orderInput" placeholder="Mã vận đơn">
 
 <button onclick="addOrder()">Thêm</button>
 
@@ -108,7 +168,29 @@ justify-content:space-between;
 
 <div class="card">
 
-<h3>📊 Danh sách shop</h3>
+<h3>Danh sách đơn</h3>
+
+<div id="orderList"></div>
+
+</div>
+
+</div>
+
+<div id="shops" style="display:none">
+
+<div class="card">
+
+<h3>🏪 Thêm shop</h3>
+
+<input id="shopName" placeholder="Tên shop">
+
+<input id="shopLogo" placeholder="Link logo">
+
+<button onclick="addShop()">Thêm</button>
+
+</div>
+
+<div class="card">
 
 <div id="shopList"></div>
 
@@ -116,13 +198,91 @@ justify-content:space-between;
 
 </div>
 
+<div id="create" style="display:none">
+
+<div class="card">
+
+<h3>🔳 Tạo QR + Barcode</h3>
+
+<input id="codeInput" placeholder="Nhập mã">
+
+<button onclick="createCode()">Tạo</button>
+
+<div id="qrcode"></div>
+
+<svg id="barcode"></svg>
+
+</div>
+
+<div class="card">
+
+<h3>📦 Tạo hàng loạt</h3>
+
+<textarea id="bulk" placeholder="mỗi dòng 1 mã"></textarea>
+
+<button onclick="bulkCreate()">Tạo</button>
+
+<div id="bulkResult"></div>
+
+</div>
+
+</div>
+
+<div id="logs" style="display:none">
+
+<div class="card">
+
+<h3>📜 Lịch sử hoạt động</h3>
+
+<div id="logList"></div>
+
+</div>
+
+</div>
+
+</div>
+
 <script>
 
-let shops=JSON.parse(localStorage.getItem("shops")||"[]")
+let today=new Date().toDateString()
+
+let db=JSON.parse(localStorage.getItem("sprinter")||"{}")
+
+if(!db[today]){
+
+db[today]={shops:[],orders:[]}
+
+}
 
 function save(){
 
-localStorage.setItem("shops",JSON.stringify(shops))
+localStorage.setItem("sprinter",JSON.stringify(db))
+
+}
+
+let logs=JSON.parse(localStorage.getItem("logs")||"[]")
+
+function log(t){
+
+logs.unshift(new Date().toLocaleTimeString()+" "+t)
+
+localStorage.setItem("logs",JSON.stringify(logs))
+
+renderLogs()
+
+}
+
+function renderLogs(){
+
+let box=document.getElementById("logList")
+
+box.innerHTML=""
+
+logs.forEach(l=>{
+
+box.innerHTML+="<div>"+l+"</div>"
+
+})
 
 }
 
@@ -130,9 +290,13 @@ function addShop(){
 
 let name=document.getElementById("shopName").value
 
-shops.push({name:name,orders:[]})
+let logo=document.getElementById("shopLogo").value
+
+db[today].shops.push({name:name,logo:logo})
 
 save()
+
+log("Thêm shop "+name)
 
 update()
 
@@ -140,23 +304,27 @@ update()
 
 function addOrder(){
 
-let shopIndex=document.getElementById("shopSelect").value
+let shop=document.getElementById("shopSelect").value
 
-let code=document.getElementById("orderCode").value
+let code=document.getElementById("orderInput").value
 
-shops[shopIndex].orders.push(code)
+db[today].orders.push({shop:shop,code:code})
 
 save()
+
+log("Thêm đơn "+code)
 
 update()
 
 }
 
-function delOrder(shopIndex,code){
+function delOrder(code){
 
-shops[shopIndex].orders=shops[shopIndex].orders.filter(x=>x!==code)
+db[today].orders=db[today].orders.filter(o=>o.code!==code)
 
 save()
+
+log("Xoá đơn "+code)
 
 update()
 
@@ -164,33 +332,29 @@ update()
 
 function update(){
 
-let list=document.getElementById("shopList")
-
 let select=document.getElementById("shopSelect")
-
-list.innerHTML=""
 
 select.innerHTML=""
 
-shops.forEach((s,i)=>{
+db[today].shops.forEach(s=>{
 
-select.innerHTML+=`<option value="${i}">${s.name}</option>`
+select.innerHTML+=`<option value="${s.name}">${s.name}</option>`
 
-let div=document.createElement("div")
+})
 
-div.className="shop"
+let list=document.getElementById("orderList")
 
-div.innerHTML=`<b>${s.name}</b> (${s.orders.length} đơn)`
+list.innerHTML=""
 
-s.orders.forEach(code=>{
+db[today].orders.forEach(o=>{
 
-div.innerHTML+=`
+list.innerHTML+=`
 
 <div class="order">
 
-<span>${code}</span>
+<span>${o.code} (${o.shop})</span>
 
-<button onclick="delOrder(${i},'${code}')">X</button>
+<button onclick="delOrder('${o.code}')">X</button>
 
 </div>
 
@@ -198,33 +362,92 @@ div.innerHTML+=`
 
 })
 
-list.appendChild(div)
+let shopList=document.getElementById("shopList")
+
+shopList.innerHTML=""
+
+db[today].shops.forEach(s=>{
+
+shopList.innerHTML+=`
+
+<div class="shop">
+
+<img src="${s.logo}">
+
+${s.name}
+
+</div>
+
+`
 
 })
 
+document.getElementById("total").innerText=db[today].orders.length
+document.getElementById("done").innerText=db[today].orders.length
+document.getElementById("shopCount").innerText=db[today].shops.length
+
+renderLogs()
+
 }
 
-function onScanSuccess(code){
+function showTab(tab){
 
-if(shops.length==0) return
+document.querySelectorAll("#dashboard,#pickup,#shops,#create,#logs")
+.forEach(e=>e.style.display="none")
 
-shops[0].orders.push(code)
+document.getElementById(tab).style.display="block"
+
+}
+
+function createCode(){
+
+let t=document.getElementById("codeInput").value
+
+document.getElementById("qrcode").innerHTML=""
+
+new QRCode(document.getElementById("qrcode"),t)
+
+JsBarcode("#barcode",t,{format:"CODE128"})
+
+log("Tạo mã "+t)
+
+}
+
+function bulkCreate(){
+
+let lines=document.getElementById("bulk").value.split("\n")
+
+let box=document.getElementById("bulkResult")
+
+box.innerHTML=""
+
+lines.forEach(l=>{
+
+box.innerHTML+=`<div>${l}<svg id="b${l}"></svg></div>`
+
+JsBarcode(`#b${l}`,l)
+
+})
+
+log("Tạo hàng loạt "+lines.length+" mã")
+
+}
+
+function scanSuccess(code){
+
+db[today].orders.push({shop:"scan",code:code})
 
 save()
+
+log("Scan "+code)
 
 update()
 
 }
 
-let scanner=new Html5QrcodeScanner(
+let scanner=new Html5QrcodeScanner("reader",{fps:30,qrbox:220})
 
-"reader",
-
-{fps:30,qrbox:220}
-
-)
-
-scanner.render(onScanSuccess)
+scanner.render(scanSuccess)
 
 update()
 
