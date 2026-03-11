@@ -7,8 +7,6 @@
 
 <title>SPRINTER</title>
 
-<meta name="apple-mobile-web-app-capable" content="yes">
-
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
@@ -28,7 +26,6 @@ background:#ff0033;
 padding:15px;
 text-align:center;
 font-size:20px;
-font-weight:bold;
 }
 
 .container{
@@ -39,15 +36,15 @@ padding:10px;
 
 .card{
 background:#1e293b;
-padding:14px;
-border-radius:14px;
-margin-bottom:12px;
+padding:12px;
+border-radius:12px;
+margin-bottom:10px;
 }
 
 button{
 background:#ff0033;
 border:none;
-padding:8px 14px;
+padding:8px 12px;
 border-radius:8px;
 color:white;
 }
@@ -63,11 +60,6 @@ display:flex;
 justify-content:space-between;
 padding:6px;
 border-bottom:1px solid #334155;
-}
-
-#reader{
-width:100%;
-border-radius:10px;
 }
 
 </style>
@@ -87,8 +79,6 @@ border-radius:10px;
 <button onclick="startScan()">Bật camera</button>
 <button onclick="stopScan()">Tắt camera</button>
 
-<button onclick="toggleFlash()">🔦 Flash</button>
-
 <div id="reader"></div>
 
 </div>
@@ -97,7 +87,7 @@ border-radius:10px;
 
 <h3>➕ Thêm đơn</h3>
 
-<input id="manual" placeholder="Mã vận đơn">
+<input id="manual">
 
 <button onclick="addManual()">Thêm</button>
 
@@ -105,7 +95,7 @@ border-radius:10px;
 
 <div class="card">
 
-<h3>📦 Danh sách đơn</h3>
+<h3>📦 Đơn hôm nay</h3>
 
 <div id="orders"></div>
 
@@ -113,7 +103,23 @@ border-radius:10px;
 
 <div class="card">
 
-<h3>🧾 QR + Barcode</h3>
+<h3>📅 Ngày đã quét</h3>
+
+<div id="days"></div>
+
+</div>
+
+<div class="card">
+
+<h3>📜 Lịch sử hoạt động</h3>
+
+<div id="history"></div>
+
+</div>
+
+<div class="card">
+
+<h3>🧾 Tạo QR + Barcode</h3>
 
 <input id="code">
 
@@ -133,62 +139,83 @@ border-radius:10px;
 
 </div>
 
-<div class="card">
-
-<h3>📍 Map shop</h3>
-
-<iframe
-width="100%"
-height="200"
-src="https://maps.google.com/maps?q=10.762622,106.660172&z=15&output=embed">
-</iframe>
-
-</div>
-
-<div class="card">
-
-<h3>🧾 In tem</h3>
-
-<button onclick="printLabel()">In tem 100x150</button>
-
-</div>
-
 </div>
 
 <script>
 
-let orders=JSON.parse(localStorage.orders||"[]")
+let data=JSON.parse(localStorage.getItem("sprinter")||"{}")
+let history=JSON.parse(localStorage.getItem("history")||"[]")
+
+function today(){
+
+return new Date().toISOString().slice(0,10)
+
+}
+
+function getOrders(){
+
+let d=today()
+
+if(!data[d])data[d]=[]
+
+return data[d]
+
+}
 
 function save(){
 
-localStorage.orders=JSON.stringify(orders)
+localStorage.setItem("sprinter",JSON.stringify(data))
+localStorage.setItem("history",JSON.stringify(history))
 
 }
 
 function beep(){
 
-let audio=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg")
+let a=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg")
 
-audio.play()
+a.play()
 
 navigator.vibrate(200)
 
 }
 
+function addHistory(text){
+
+history.unshift({
+
+time:new Date().toLocaleString(),
+text:text
+
+})
+
+save()
+
+renderHistory()
+
+}
+
 function processOrder(code){
 
-let found=orders.find(o=>o.code==code)
+let orders=getOrders()
+
+let found=orders.find(o=>o.code===code)
 
 if(found){
 
 found.taken=true
 
+addHistory("Đã lấy "+code)
+
 }else{
 
 orders.push({
+
 code:code,
 taken:false
+
 })
+
+addHistory("Nhập đơn "+code)
 
 }
 
@@ -208,23 +235,13 @@ processOrder(code)
 
 }
 
-function deleteOrder(code){
-
-orders=orders.filter(o=>o.code!=code)
-
-save()
-
-render()
-
-}
-
 function render(){
 
 let box=document.getElementById("orders")
 
 box.innerHTML=""
 
-orders.forEach(o=>{
+getOrders().forEach(o=>{
 
 let div=document.createElement("div")
 
@@ -232,15 +249,71 @@ div.className="order"
 
 div.innerHTML=
 
-o.code+" "+(o.taken?"✅":"⏳")+
-
-`<button onclick="deleteOrder('${o.code}')">X</button>`
+o.code+" "+(o.taken?"✅":"⏳")
 
 box.appendChild(div)
 
 })
 
 updateChart()
+
+renderDays()
+
+}
+
+function renderDays(){
+
+let box=document.getElementById("days")
+
+box.innerHTML=""
+
+Object.keys(data).reverse().forEach(d=>{
+
+let btn=document.createElement("button")
+
+btn.innerText=d
+
+btn.onclick=()=>showDay(d)
+
+box.appendChild(btn)
+
+})
+
+}
+
+function showDay(day){
+
+let box=document.getElementById("orders")
+
+box.innerHTML=""
+
+data[day].forEach(o=>{
+
+let div=document.createElement("div")
+
+div.innerText=o.code+(o.taken?" ✅":" ⏳")
+
+box.appendChild(div)
+
+})
+
+}
+
+function renderHistory(){
+
+let box=document.getElementById("history")
+
+box.innerHTML=""
+
+history.slice(0,20).forEach(h=>{
+
+let div=document.createElement("div")
+
+div.innerText=h.time+" - "+h.text
+
+box.appendChild(div)
+
+})
 
 }
 
@@ -264,11 +337,11 @@ function startScan(){
 scanner=new Html5Qrcode("reader")
 
 scanner.start(
+
 {facingMode:"environment"},
-{
-fps:60,
-qrbox:{width:320,height:220}
-},
+
+{fps:60,qrbox:250},
+
 (code)=>{
 
 if(code===last)return
@@ -278,6 +351,7 @@ last=code
 processOrder(code)
 
 }
+
 )
 
 }
@@ -288,30 +362,29 @@ if(scanner)scanner.stop()
 
 }
 
-function toggleFlash(){
-
-if(scanner){
-
-scanner.applyVideoConstraints({
-advanced:[{torch:true}]
-})
-
-}
-
-}
-
 let chart=new Chart(
+
 document.getElementById("chart"),
+
 {
+
 type:"doughnut",
+
 data:{
+
 labels:["Đã lấy","Chưa lấy"],
+
 datasets:[{data:[0,0]}]
+
 }
+
 }
+
 )
 
 function updateChart(){
+
+let orders=getOrders()
 
 let taken=orders.filter(o=>o.taken).length
 
@@ -321,39 +394,8 @@ chart.update()
 
 }
 
-function printLabel(){
-
-let code=document.getElementById("code").value
-
-let w=window.open()
-
-w.document.write(
-
-`<div style="width:100mm;height:150mm;font-size:28px">
-
-<h2>SPRINTER</h2>
-
-${code}
-
-<svg id="b"></svg>
-
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
-
-<script>
-
-JsBarcode("#b","${code}")
-
-window.print()
-
-</script>`
-
-)
-
-}
-
 render()
+renderHistory()
 
 </script>
 
