@@ -1,83 +1,74 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
+
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
 <title>SPRINTER</title>
 
-<link rel="manifest" href="manifest.json">
-
-<meta name="theme-color" content="#ff3b3b">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="SPRINTER">
-
-<link rel="apple-touch-icon" href="icon-192.png">
-
 <script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 
 <style>
 
 body{
 margin:0;
-font-family:-apple-system;
-background:#0c1022;
-color:white;
+font-family:Arial;
+background:#f1f5f9;
 }
 
 header{
-background:linear-gradient(90deg,#ff0033,#ff6600);
+background:linear-gradient(90deg,#ff3d00,#ff9100);
+color:white;
 padding:15px;
 text-align:center;
 font-size:22px;
-}
-
-.container{
-padding:10px;
-}
-
-.card{
-background:#161a33;
-padding:12px;
-border-radius:12px;
-margin-bottom:10px;
-}
-
-input,button{
-padding:10px;
-border-radius:8px;
-border:none;
-margin:4px;
-}
-
-button{
-background:#ff0033;
-color:white;
+font-weight:bold;
 }
 
 .dashboard{
 display:grid;
 grid-template-columns:repeat(3,1fr);
 gap:10px;
+padding:10px;
 }
 
-.box{
-background:#111633;
-padding:10px;
+.card{
+background:white;
+padding:15px;
+border-radius:12px;
+box-shadow:0 4px 10px rgba(0,0,0,0.15);
 text-align:center;
-border-radius:10px;
+font-size:18px;
+}
+
+.section{
+background:white;
+margin:10px;
+padding:12px;
+border-radius:12px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
 }
 
 .order{
-display:flex;
-justify-content:space-between;
-background:#070a18;
-padding:6px;
-margin-top:4px;
-border-radius:6px;
+padding:8px;
+border-bottom:1px solid #eee;
+}
+
+button{
+background:#ff3d00;
+color:white;
+border:none;
+padding:10px;
+border-radius:8px;
+margin-top:5px;
+}
+
+#reader{
+width:100%;
 }
 
 </style>
@@ -89,185 +80,213 @@ border-radius:6px;
 <header>
 
 SPRINTER  
-<div style="font-size:12px">Tool by Cao Cường</div>
+<p style="font-size:12px">Tool by Cao Cường</p>
 
 </header>
 
-<div class="container">
+<div class="dashboard">
 
-<div class="card dashboard">
-
-<div class="box">
-Tổng
-<br>
+<div class="card">
+Tổng đơn<br>
 <span id="total">0</span>
 </div>
 
-<div class="box">
-Đã lấy
-<br>
-<span id="done">0</span>
+<div class="card">
+Đã lấy<br>
+<span id="taken">0</span>
 </div>
 
-<div class="box">
-Chưa lấy
-<br>
+<div class="card">
+Chưa lấy<br>
 <span id="pending">0</span>
 </div>
 
 </div>
 
-<div class="card">
+<div class="section">
 
-<h3>Scan vận đơn</h3>
+<h3>📷 Quét vận đơn</h3>
+
+<button onclick="toggleFlash()">🔦 Flash</button>
 
 <div id="reader"></div>
 
 </div>
 
-<div class="card">
+<div class="section">
 
-<h3>Nhập đơn</h3>
+<h3>📦 Danh sách đơn</h3>
 
-<input id="orderInput" placeholder="Mã vận đơn">
-
-<button onclick="addOrder()">Thêm</button>
+<div id="orders"></div>
 
 </div>
 
-<div class="card">
+<div class="section">
 
-<h3>Danh sách đơn</h3>
+<h3>🧾 In tem vận đơn</h3>
 
-<div id="orderList"></div>
+<input id="code" placeholder="Mã vận đơn">
 
-</div>
+<input id="shop" placeholder="Tên shop">
 
-<div class="card">
+<input id="address" placeholder="Địa chỉ">
 
-<h3>Tạo QR / Barcode</h3>
-
-<input id="codeInput">
-
-<button onclick="createCode()">Tạo</button>
+<br>
 
 <button onclick="printLabel()">In tem</button>
 
-<div id="qrcode"></div>
-
-<svg id="barcode"></svg>
-
-</div>
+<div id="label"></div>
 
 </div>
 
 <script>
 
-let db=JSON.parse(localStorage.getItem("sprinter")||"[]")
+let orders=[]
 
-function save(){
+let beep=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg")
 
-localStorage.setItem("sprinter",JSON.stringify(db))
+function addOrder(code){
+
+let found=orders.find(o=>o.code==code)
+
+if(found){
+
+found.taken=true
+
+}else{
+
+orders.push({code:code,taken:false})
 
 }
-
-function addOrder(){
-
-let code=document.getElementById("orderInput").value
-
-db.push({
-
-code:code,
-status:"pending"
-
-})
-
-save()
 
 update()
 
-}
+beep.play()
 
-function scanSuccess(code){
-
-let order=db.find(o=>o.code===code)
-
-if(order){
-
-order.status="done"
-
-}
-
-save()
-
-update()
+navigator.vibrate(200)
 
 }
 
 function update(){
 
-let list=document.getElementById("orderList")
+document.getElementById("orders").innerHTML=""
 
-list.innerHTML=""
+orders.forEach(o=>{
 
-db.forEach(o=>{
+let div=document.createElement("div")
 
-let status=o.status==="done"?"✅":"❌"
+div.className="order"
 
-list.innerHTML+=`
+div.innerText=o.code+" "+(o.taken?"✅":"⏳")
 
-<div class="order">
-
-<span>${o.code}</span>
-
-<span>${status}</span>
-
-</div>
-
-`
+document.getElementById("orders").appendChild(div)
 
 })
 
-let total=db.length
-let done=db.filter(o=>o.status==="done").length
+document.getElementById("total").innerText=orders.length
 
-document.getElementById("total").innerText=total
-document.getElementById("done").innerText=done
-document.getElementById("pending").innerText=total-done
+let taken=orders.filter(o=>o.taken).length
+
+document.getElementById("taken").innerText=taken
+
+document.getElementById("pending").innerText=orders.length-taken
 
 }
 
-function createCode(){
+function scanSuccess(text){
 
-let code=document.getElementById("codeInput").value
+addOrder(text)
 
-document.getElementById("qrcode").innerHTML=""
+}
 
-new QRCode(document.getElementById("qrcode"),code)
+let scanner=new Html5Qrcode("reader")
 
-JsBarcode("#barcode",code)
+Html5Qrcode.getCameras().then(devices=>{
+
+let cam=devices[devices.length-1].id
+
+scanner.start(
+
+cam,
+
+{
+
+fps:120,
+
+qrbox:300
+
+},
+
+scanSuccess
+
+)
+
+})
+
+let flash=false
+
+async function toggleFlash(){
+
+try{
+
+flash=!flash
+
+await scanner.applyVideoConstraints({
+
+advanced:[{torch:flash}]
+
+})
+
+}catch(e){
+
+alert("Camera không hỗ trợ flash")
+
+}
 
 }
 
 function printLabel(){
 
+let code=document.getElementById("code").value
+
+let shop=document.getElementById("shop").value
+
+let address=document.getElementById("address").value
+
+document.getElementById("label").innerHTML=`
+
+<div id="printArea" style="width:100mm;height:150mm;border:2px solid black;padding:10px;font-family:Arial">
+
+<h2>SPRINTER</h2>
+
+<p>${shop}</p>
+
+<p>${address}</p>
+
+<p>Mã vận đơn</p>
+
+<svg id="barcode"></svg>
+
+<div id="qr"></div>
+
+</div>
+
+`
+
+JsBarcode("#barcode",code,{width:2,height:80})
+
+new QRCode(document.getElementById("qr"),code)
+
+setTimeout(()=>{
+
 window.print()
 
-}
-
-let scanner=new Html5QrcodeScanner("reader",{fps:60,qrbox:250})
-
-scanner.render(scanSuccess)
-
-update()
-
-if("serviceWorker" in navigator){
-
-navigator.serviceWorker.register("service-worker.js")
+},500)
 
 }
 
 </script>
 
 </body>
+
 </html>
