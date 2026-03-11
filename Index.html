@@ -1,179 +1,330 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
+
 <head>
-<meta charset="utf-8">
+
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>Shipper Tool</title>
+
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
 <style>
+
 body{
 font-family:Arial;
-background:#f2f2f2;
-text-align:center;
+background:#101323;
+color:white;
 margin:0;
 }
 
 header{
-background:#e00022;
-color:white;
+background:#ff0033;
 padding:12px;
-font-size:20px;
+font-weight:bold;
+text-align:center;
 }
 
-#reader{
-width:300px;
+.container{
+padding:10px;
+max-width:600px;
 margin:auto;
 }
 
-button{
-padding:10px;
-margin:5px;
+.card{
+background:#1a1e34;
+padding:12px;
+border-radius:10px;
+margin-bottom:12px;
+}
+
+input,button{
+padding:8px;
+margin:4px;
 border:none;
-background:#e00022;
-color:white;
-border-radius:5px;
+border-radius:6px;
 }
 
-input{
-padding:10px;
-width:250px;
-margin:5px;
+button{
+cursor:pointer;
 }
 
-ul{
-list-style:none;
-padding:0;
+#reader{
+width:100%;
 }
 
-li{
-background:white;
-margin:5px;
-padding:10px;
-border-radius:5px;
+.item{
+background:#11142a;
+padding:8px;
+margin-top:6px;
+border-radius:6px;
+display:flex;
+justify-content:space-between;
+align-items:center;
 }
+
+.done{
+color:#4cff6a;
+}
+
+.todo{
+color:#ffcc00;
+}
+
+#toast{
+position:fixed;
+top:15px;
+left:50%;
+transform:translateX(-50%);
+background:#333;
+padding:10px 15px;
+border-radius:8px;
+display:none;
+}
+
 </style>
+
 </head>
 
 <body>
 
 <header>Shipper Tool</header>
 
-<h3>Quét đơn</h3>
+<div class="container">
+
+<div class="card">
+
+<h3>📷 Quét đơn</h3>
 
 <div id="reader"></div>
 
-<br>
+</div>
 
-<input id="manual" placeholder="Nhập mã vận đơn">
-<button onclick="addManual()">Thêm</button>
+<div class="card">
 
-<br>
+<h3>➕ Thêm mã vận đơn</h3>
 
-<input id="search" placeholder="Tìm đơn" onkeyup="searchOrder()">
+<input id="codeInput" placeholder="Nhập mã vận đơn">
 
-<h3 id="stats"></h3>
+<button onclick="addOrder()">Thêm</button>
 
-<ul id="list"></ul>
+</div>
+
+<div class="card">
+
+<h3>🔳 Tạo QR + Barcode</h3>
+
+<input id="genCode" placeholder="Nhập mã vận đơn">
+
+<button onclick="createCode()">Tạo</button>
+
+<h4>QR Code</h4>
+
+<div id="qrcode"></div>
+
+<h4>Barcode</h4>
+
+<svg id="barcode"></svg>
+
+</div>
+
+<div class="card">
+
+<h3>📦 Danh sách đơn</h3>
+
+<div id="list"></div>
+
+</div>
+
+</div>
+
+<div id="toast"></div>
 
 <script>
 
-let orders = JSON.parse(localStorage.getItem("orders")) || []
+let orders=JSON.parse(localStorage.getItem("orders")||"[]")
 
 function save(){
+
 localStorage.setItem("orders",JSON.stringify(orders))
+
+}
+
+function toast(text){
+
+let box=document.getElementById("toast")
+
+box.innerText=text
+
+box.style.display="block"
+
+setTimeout(()=>{
+
+box.style.display="none"
+
+},1500)
+
+}
+
+function addOrder(){
+
+let code=document.getElementById("codeInput").value
+
+if(!code) return
+
+orders.push({
+
+code:code,
+
+done:false
+
+})
+
+save()
+
 update()
+
+}
+
+function toggle(code){
+
+let o=orders.find(x=>x.code===code)
+
+if(o){
+
+o.done=true
+
+toast("Đã lấy "+code)
+
+}
+
+save()
+
+update()
+
+}
+
+function del(code){
+
+orders=orders.filter(x=>x.code!==code)
+
+save()
+
+update()
+
 }
 
 function update(){
 
-let list = document.getElementById("list")
-list.innerHTML = ""
+let list=document.getElementById("list")
 
-let done = 0
+list.innerHTML=""
 
 orders.forEach(o=>{
 
-let li = document.createElement("li")
+let div=document.createElement("div")
 
-if(o.done){
-li.innerHTML = o.code + " ✅ Đã lấy"
-done++
-}else{
-li.innerHTML = o.code + " ⏳ Chưa lấy"
-}
+div.className="item"
 
-li.onclick = ()=>{
-o.done = !o.done
-save()
-}
+div.innerHTML=
 
-list.appendChild(li)
+"<span>"+o.code+"</span>"+
+
+"<span class='"+(o.done?"done":"todo")+"'>"+
+
+(o.done?"Đã lấy":"Chưa")+
+
+"</span>"+
+
+"<button onclick=\"toggle('"+o.code+"')\">✓</button>"+
+
+"<button onclick=\"del('"+o.code+"')\">X</button>"
+
+list.appendChild(div)
 
 })
 
-document.getElementById("stats").innerHTML =
-"Tổng: "+orders.length+
-" | Đã lấy: "+done+
-" | Chưa lấy: "+(orders.length-done)
-
 }
 
-function addManual(){
+function createCode(){
 
-let code = document.getElementById("manual").value
+let text=document.getElementById("genCode").value
 
-if(code=="") return
+if(!text) return
 
-orders.push({code:code,done:false})
+let qr=document.getElementById("qrcode")
 
-save()
+qr.innerHTML=""
 
-document.getElementById("manual").value=""
+new QRCode(qr,{
+
+text:text,
+
+width:200,
+
+height:200
+
+})
+
+JsBarcode("#barcode",text,{
+
+format:"CODE128",
+
+width:2,
+
+height:80,
+
+displayValue:true
+
+})
 
 }
 
 function onScanSuccess(code){
 
-let order = orders.find(o=>o.code==code)
+let o=orders.find(x=>x.code===code)
 
-if(order){
+if(o){
 
-if(order.done){
-alert("⚠ Đơn đã quét")
-}else{
-order.done=true
-}
+o.done=true
+
+toast("Đã lấy "+code)
 
 }else{
 
-orders.push({code:code,done:true})
+orders.push({
+
+code:code,
+
+done:true
+
+})
+
+toast("Đơn mới "+code)
 
 }
 
 save()
 
-}
-
-function searchOrder(){
-
-let text = document.getElementById("search").value.toLowerCase()
-
-let items = document.querySelectorAll("li")
-
-items.forEach(li=>{
-if(li.innerText.toLowerCase().includes(text)){
-li.style.display=""
-}else{
-li.style.display="none"
-}
-})
+update()
 
 }
 
-let scanner = new Html5QrcodeScanner(
+let scanner=new Html5QrcodeScanner(
+
 "reader",
-{fps:10,qrbox:250}
+
+{
+
+fps:30,
+
+qrbox:220
+
+}
+
 )
 
 scanner.render(onScanSuccess)
@@ -183,4 +334,5 @@ update()
 </script>
 
 </body>
+
 </html>
