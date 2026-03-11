@@ -3,16 +3,21 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>SPRINTER</title>
 
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#ff3b3b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SPRINTER">
+
+<link rel="apple-touch-icon" href="icon-192.png">
+
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode/dist/JsBarcode.all.min.js"></script>
 
 <style>
 
@@ -30,14 +35,7 @@ text-align:center;
 font-size:22px;
 }
 
-.creator{
-font-size:12px;
-opacity:0.8;
-}
-
 .container{
-max-width:900px;
-margin:auto;
 padding:10px;
 }
 
@@ -45,10 +43,10 @@ padding:10px;
 background:#161a33;
 padding:12px;
 border-radius:12px;
-margin-bottom:12px;
+margin-bottom:10px;
 }
 
-input,select,button,textarea{
+input,button{
 padding:10px;
 border-radius:8px;
 border:none;
@@ -60,15 +58,6 @@ background:#ff0033;
 color:white;
 }
 
-.tab{
-display:inline-block;
-background:#1c2147;
-padding:10px;
-margin:4px;
-border-radius:6px;
-cursor:pointer;
-}
-
 .dashboard{
 display:grid;
 grid-template-columns:repeat(3,1fr);
@@ -77,10 +66,9 @@ gap:10px;
 
 .box{
 background:#111633;
-padding:15px;
-border-radius:12px;
+padding:10px;
 text-align:center;
-font-size:20px;
+border-radius:10px;
 }
 
 .order{
@@ -92,14 +80,6 @@ margin-top:4px;
 border-radius:6px;
 }
 
-#reader{
-width:100%;
-}
-
-#map{
-height:300px;
-}
-
 </style>
 
 </head>
@@ -108,33 +88,17 @@ height:300px;
 
 <header>
 
-SPRINTER
-
-<div class="creator">
-Tool by Cao Cường
-</div>
+SPRINTER  
+<div style="font-size:12px">Tool by Cao Cường</div>
 
 </header>
 
 <div class="container">
 
-<div>
-
-<span class="tab" onclick="showTab('dashboard')">Dashboard</span>
-<span class="tab" onclick="showTab('pickup')">Pickup</span>
-<span class="tab" onclick="showTab('shops')">Shop</span>
-<span class="tab" onclick="showTab('mapTab')">Map</span>
-<span class="tab" onclick="showTab('create')">QR / Barcode</span>
-<span class="tab" onclick="showTab('logs')">Logs</span>
-
-</div>
-
-<div id="dashboard">
-
 <div class="card dashboard">
 
 <div class="box">
-Tổng đơn
+Tổng
 <br>
 <span id="total">0</span>
 </div>
@@ -153,10 +117,6 @@ Chưa lấy
 
 </div>
 
-</div>
-
-<div id="pickup" style="display:none">
-
 <div class="card">
 
 <h3>Scan vận đơn</h3>
@@ -167,7 +127,7 @@ Chưa lấy
 
 <div class="card">
 
-<select id="shopSelect"></select>
+<h3>Nhập đơn</h3>
 
 <input id="orderInput" placeholder="Mã vận đơn">
 
@@ -177,53 +137,19 @@ Chưa lấy
 
 <div class="card">
 
+<h3>Danh sách đơn</h3>
+
 <div id="orderList"></div>
 
 </div>
 
-</div>
-
-<div id="shops" style="display:none">
-
 <div class="card">
 
-<input id="shopName" placeholder="Tên shop">
+<h3>Tạo QR / Barcode</h3>
 
-<input id="shopLogo" placeholder="Logo">
-
-<button onclick="addShop()">Thêm shop</button>
-
-</div>
-
-<div class="card">
-
-<div id="shopList"></div>
-
-</div>
-
-</div>
-
-<div id="mapTab" style="display:none">
-
-<div class="card">
-
-<div id="map"></div>
-
-</div>
-
-</div>
-
-<div id="create" style="display:none">
-
-<div class="card">
-
-<input id="codeInput" placeholder="Mã">
+<input id="codeInput">
 
 <button onclick="createCode()">Tạo</button>
-
-<button onclick="downloadQR()">Tải QR</button>
-
-<button onclick="downloadBarcode()">Tải Barcode</button>
 
 <button onclick="printLabel()">In tem</button>
 
@@ -233,43 +159,11 @@ Chưa lấy
 
 </div>
 
-<div class="card">
-
-<textarea id="bulkCodes" placeholder="mỗi dòng 1 mã"></textarea>
-
-<button onclick="generateBulk()">Tạo hàng loạt</button>
-
-<div id="bulkResult"></div>
-
-</div>
-
-</div>
-
-<div id="logs" style="display:none">
-
-<div class="card">
-
-<div id="logList"></div>
-
-</div>
-
-</div>
-
 </div>
 
 <script>
 
-let today=new Date().toDateString()
-
-let db=JSON.parse(localStorage.getItem("sprinter")||"{}")
-
-if(!db[today]){
-
-db[today]={shops:[],orders:[]}
-
-}
-
-let logs=JSON.parse(localStorage.getItem("logs")||"[]")
+let db=JSON.parse(localStorage.getItem("sprinter")||"[]")
 
 function save(){
 
@@ -277,63 +171,18 @@ localStorage.setItem("sprinter",JSON.stringify(db))
 
 }
 
-function log(t){
-
-logs.unshift(new Date().toLocaleTimeString()+" "+t)
-
-localStorage.setItem("logs",JSON.stringify(logs))
-
-renderLogs()
-
-}
-
-function renderLogs(){
-
-let box=document.getElementById("logList")
-
-box.innerHTML=""
-
-logs.forEach(l=>{
-
-box.innerHTML+="<div>"+l+"</div>"
-
-})
-
-}
-
-function addShop(){
-
-let name=document.getElementById("shopName").value
-
-let logo=document.getElementById("shopLogo").value
-
-db[today].shops.push({name,logo})
-
-save()
-
-log("Thêm shop "+name)
-
-update()
-
-}
-
 function addOrder(){
-
-let shop=document.getElementById("shopSelect").value
 
 let code=document.getElementById("orderInput").value
 
-db[today].orders.push({
+db.push({
 
-shop,
-code,
+code:code,
 status:"pending"
 
 })
 
 save()
-
-log("Nhập đơn "+code)
 
 update()
 
@@ -341,27 +190,13 @@ update()
 
 function scanSuccess(code){
 
-let order=db[today].orders.find(o=>o.code===code)
+let order=db.find(o=>o.code===code)
 
-if(!order){
-
-alert("Không có đơn này")
-
-return
-
-}
-
-if(order.status==="done"){
-
-alert("Đơn đã lấy")
-
-return
-
-}
+if(order){
 
 order.status="done"
 
-log("Đã lấy "+code)
+}
 
 save()
 
@@ -371,21 +206,11 @@ update()
 
 function update(){
 
-let select=document.getElementById("shopSelect")
-
-select.innerHTML=""
-
-db[today].shops.forEach(s=>{
-
-select.innerHTML+=`<option>${s.name}</option>`
-
-})
-
 let list=document.getElementById("orderList")
 
 list.innerHTML=""
 
-db[today].orders.forEach(o=>{
+db.forEach(o=>{
 
 let status=o.status==="done"?"✅":"❌"
 
@@ -393,7 +218,7 @@ list.innerHTML+=`
 
 <div class="order">
 
-<span>${o.code} (${o.shop})</span>
+<span>${o.code}</span>
 
 <span>${status}</span>
 
@@ -403,26 +228,12 @@ list.innerHTML+=`
 
 })
 
-let total=db[today].orders.length
-
-let done=db[today].orders.filter(o=>o.status==="done").length
-
-let pending=total-done
+let total=db.length
+let done=db.filter(o=>o.status==="done").length
 
 document.getElementById("total").innerText=total
 document.getElementById("done").innerText=done
-document.getElementById("pending").innerText=pending
-
-renderLogs()
-
-}
-
-function showTab(tab){
-
-document.querySelectorAll("#dashboard,#pickup,#shops,#mapTab,#create,#logs")
-.forEach(e=>e.style.display="none")
-
-document.getElementById(tab).style.display="block"
+document.getElementById("pending").innerText=total-done
 
 }
 
@@ -438,95 +249,9 @@ JsBarcode("#barcode",code)
 
 }
 
-function downloadQR(){
-
-let img=document.querySelector("#qrcode img")
-
-let a=document.createElement("a")
-
-a.href=img.src
-
-a.download="qr.png"
-
-a.click()
-
-}
-
-function downloadBarcode(){
-
-let svg=document.getElementById("barcode")
-
-let data=new XMLSerializer().serializeToString(svg)
-
-let blob=new Blob([data])
-
-let url=URL.createObjectURL(blob)
-
-let a=document.createElement("a")
-
-a.href=url
-
-a.download="barcode.svg"
-
-a.click()
-
-}
-
 function printLabel(){
 
-let code=document.getElementById("codeInput").value
-
-let qr=document.querySelector("#qrcode img").src
-
-let barcode=document.getElementById("barcode").outerHTML
-
-let w=window.open()
-
-w.document.write(`
-
-<h2>SPRINTER</h2>
-
-<p>${code}</p>
-
-<img src="${qr}">
-
-${barcode}
-
-<script>
 window.print()
-</script>
-
-`)
-
-}
-
-function generateBulk(){
-
-let codes=document.getElementById("bulkCodes").value.split("\n")
-
-let box=document.getElementById("bulkResult")
-
-box.innerHTML=""
-
-codes.forEach(c=>{
-
-box.innerHTML+=`
-
-<div>
-
-<div id="qr${c}"></div>
-
-<svg id="bar${c}"></svg>
-
-</div>
-
-`
-
-new QRCode(document.getElementById("qr"+c),c)
-
-JsBarcode("#bar"+c,c)
-
-})
 
 }
 
@@ -534,11 +259,13 @@ let scanner=new Html5QrcodeScanner("reader",{fps:60,qrbox:250})
 
 scanner.render(scanSuccess)
 
-let map=L.map('map').setView([10.8231,106.6297],13)
-
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
-
 update()
+
+if("serviceWorker" in navigator){
+
+navigator.serviceWorker.register("service-worker.js")
+
+}
 
 </script>
 
