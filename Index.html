@@ -1,20 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <title>SPRINTER</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- FIREBASE REALTIME -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
 <style>
 
@@ -27,17 +21,9 @@ background:#eef2f7;
 header{
 background:linear-gradient(90deg,#ff3d00,#ff9100);
 color:white;
-padding:15px;
+padding:16px;
 text-align:center;
 font-size:22px;
-}
-
-.section{
-background:white;
-margin:10px;
-padding:12px;
-border-radius:10px;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
 }
 
 .dashboard{
@@ -55,24 +41,34 @@ text-align:center;
 box-shadow:0 3px 10px rgba(0,0,0,0.1);
 }
 
-.order{
-display:flex;
-justify-content:space-between;
-padding:6px;
-border-bottom:1px solid #eee;
+.section{
+background:white;
+margin:10px;
+padding:12px;
+border-radius:10px;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
 }
 
 button{
 background:#ff3d00;
 color:white;
 border:none;
-padding:6px 10px;
+padding:6px 12px;
 border-radius:6px;
+margin:3px;
 }
 
 input{
 padding:6px;
-margin:4px;
+margin:3px;
+width:150px;
+}
+
+.order{
+display:flex;
+justify-content:space-between;
+border-bottom:1px solid #eee;
+padding:6px;
 }
 
 #reader{
@@ -80,16 +76,13 @@ width:100%;
 }
 
 </style>
-
 </head>
 
 <body>
 
 <header>
-
 SPRINTER  
 <div style="font-size:12px">Tool by Cao Cường</div>
-
 </header>
 
 <div class="dashboard">
@@ -112,7 +105,9 @@ Chưa lấy<br><span id="pending">0</span>
 
 <h3>📷 Scan vận đơn</h3>
 
-<button onclick="toggleFlash()">🔦 Flash</button>
+<button onclick="startScan()">Bật camera</button>
+<button onclick="stopScan()">Tắt camera</button>
+<button onclick="toggleFlash()">Flash</button>
 
 <div id="reader"></div>
 
@@ -120,10 +115,9 @@ Chưa lấy<br><span id="pending">0</span>
 
 <div class="section">
 
-<h3>📦 Danh sách đơn</h3>
+<h3>📦 Nhập đơn</h3>
 
-<input id="manual" placeholder="Nhập mã">
-
+<input id="manualCode" placeholder="Mã vận đơn">
 <button onclick="addManual()">Thêm</button>
 
 <input id="search" placeholder="Tìm đơn" onkeyup="searchOrder()">
@@ -134,11 +128,9 @@ Chưa lấy<br><span id="pending">0</span>
 
 <div class="section">
 
-<h3>📍 Map shop</h3>
+<h3>📜 Lịch sử hoạt động</h3>
 
-<input id="mapAddress" placeholder="Địa chỉ shop">
-
-<button onclick="openMap()">Mở bản đồ</button>
+<div id="history"></div>
 
 </div>
 
@@ -147,12 +139,33 @@ Chưa lấy<br><span id="pending">0</span>
 <h3>🧾 Tạo QR / Barcode</h3>
 
 <input id="genCode" placeholder="Mã vận đơn">
-
-<button onclick="generate()">Tạo</button>
+<button onclick="generateCode()">Tạo</button>
 
 <div id="qr"></div>
-
 <svg id="barcode"></svg>
+
+</div>
+
+<div class="section">
+
+<h3>📍 Map shop</h3>
+
+<input id="mapAddress" placeholder="Địa chỉ shop">
+<button onclick="openMap()">Mở bản đồ</button>
+
+</div>
+
+<div class="section">
+
+<h3>🖨 In tem vận đơn</h3>
+
+<input id="pcode" placeholder="Mã">
+<input id="pshop" placeholder="Shop">
+<input id="paddr" placeholder="Địa chỉ">
+
+<button onclick="printLabel()">In tem</button>
+
+<div id="print"></div>
 
 </div>
 
@@ -166,90 +179,93 @@ Chưa lấy<br><span id="pending">0</span>
 
 <script>
 
-/* FIREBASE CONFIG */
+let orders=JSON.parse(localStorage.orders||"[]")
+let history=JSON.parse(localStorage.history||"[]")
 
-const firebaseConfig = {
-apiKey: "test",
-authDomain: "test",
-databaseURL: "https://test.firebaseio.com",
-projectId: "test",
-};
+function save(){
+localStorage.orders=JSON.stringify(orders)
+localStorage.history=JSON.stringify(history)
+}
 
-firebase.initializeApp(firebaseConfig)
-
-let db=firebase.database()
-
-let orders=[]
-
-db.ref("orders").on("value",snap=>{
-
-orders=Object.values(snap.val()||{})
-
-render()
-
+function log(action,code){
+history.unshift({
+time:new Date().toLocaleString(),
+action:action,
+code:code
 })
+save()
+renderHistory()
+}
 
 function addOrder(code){
 
-let ref=db.ref("orders/"+code)
+let order=orders.find(o=>o.code==code)
 
-ref.once("value",snap=>{
-
-if(snap.exists()){
-
-ref.update({taken:true})
-
+if(order){
+order.taken=true
+log("Đã lấy",code)
 }else{
-
-ref.set({
-
+orders.push({
 code:code,
 taken:false,
-time:new Date().toLocaleString()
-
+date:new Date().toLocaleDateString()
 })
-
+log("Nhập đơn",code)
 }
 
-})
-
 beep()
-
 navigator.vibrate(200)
+
+save()
+render()
 
 }
 
 function addManual(){
-
-let code=document.getElementById("manual").value
-
+let code=document.getElementById("manualCode").value
 addOrder(code)
+}
+
+function confirmOrder(code){
+
+let order=orders.find(o=>o.code==code)
+order.taken=true
+
+log("Xác nhận thủ công",code)
+
+save()
+render()
 
 }
 
 function deleteOrder(code){
 
-db.ref("orders/"+code).remove()
+orders=orders.filter(o=>o.code!=code)
+
+log("Xóa đơn",code)
+
+save()
+render()
 
 }
 
 function render(){
 
 let box=document.getElementById("orders")
-
 box.innerHTML=""
 
 orders.forEach(o=>{
 
 let div=document.createElement("div")
-
 div.className="order"
 
 div.innerHTML=
-
 o.code+" "+(o.taken?"✅":"⏳")+
 
-` <button onclick="deleteOrder('${o.code}')">X</button>`
+` <span>
+<button onclick="confirmOrder('${o.code}')">✔</button>
+<button onclick="deleteOrder('${o.code}')">🗑</button>
+</span>`
 
 box.appendChild(div)
 
@@ -266,12 +282,23 @@ document.getElementById("total").innerText=orders.length
 let taken=orders.filter(o=>o.taken).length
 
 document.getElementById("taken").innerText=taken
-
 document.getElementById("pending").innerText=orders.length-taken
 
 chart.data.datasets[0].data=[taken,orders.length-taken]
-
 chart.update()
+
+}
+
+function renderHistory(){
+
+let box=document.getElementById("history")
+box.innerHTML=""
+
+history.slice(0,20).forEach(h=>{
+let div=document.createElement("div")
+div.innerText=h.time+" | "+h.action+" | "+h.code
+box.appendChild(div)
+})
 
 }
 
@@ -280,15 +307,12 @@ function searchOrder(){
 let key=document.getElementById("search").value
 
 let box=document.getElementById("orders")
-
 box.innerHTML=""
 
 orders.filter(o=>o.code.includes(key)).forEach(o=>{
 
 let div=document.createElement("div")
-
 div.className="order"
-
 div.innerText=o.code
 
 box.appendChild(div)
@@ -297,7 +321,7 @@ box.appendChild(div)
 
 }
 
-function generate(){
+function generateCode(){
 
 let code=document.getElementById("genCode").value
 
@@ -312,59 +336,78 @@ JsBarcode("#barcode",code)
 function openMap(){
 
 let addr=document.getElementById("mapAddress").value
-
 window.open("https://www.google.com/maps/search/"+addr)
 
 }
 
 function beep(){
-
 new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg").play()
+}
+
+function printLabel(){
+
+let code=document.getElementById("pcode").value
+let shop=document.getElementById("pshop").value
+let addr=document.getElementById("paddr").value
+
+document.getElementById("print").innerHTML=
+
+`
+<div style="width:100mm;height:150mm;border:2px solid black;padding:10px">
+
+<h2>SPRINTER</h2>
+
+<p>${shop}</p>
+<p>${addr}</p>
+
+<svg id="pbarcode"></svg>
+<div id="pqr"></div>
+
+</div>
+`
+
+JsBarcode("#pbarcode",code)
+
+new QRCode(document.getElementById("pqr"),code)
+
+setTimeout(()=>window.print(),500)
 
 }
 
-let scanner=new Html5Qrcode("reader")
+let scanner
+let cameraId
 
 Html5Qrcode.getCameras().then(devices=>{
-
-let cam=devices[devices.length-1].id
-
-scanner.start(cam,{fps:120,qrbox:280},scanSuccess)
-
+cameraId=devices[devices.length-1].id
 })
 
+function startScan(){
+scanner=new Html5Qrcode("reader")
+scanner.start(cameraId,{fps:30,qrbox:250},scanSuccess)
+}
+
+function stopScan(){
+if(scanner){scanner.stop()}
+}
+
 function scanSuccess(code){
-
 addOrder(code)
-
 }
 
 let flash=false
 
 async function toggleFlash(){
 
-try{
-
 flash=!flash
 
 await scanner.applyVideoConstraints({
-
 advanced:[{torch:flash}]
-
 })
-
-}catch(e){
-
-alert("Camera không hỗ trợ flash")
-
-}
 
 }
 
 let chart=new Chart(
-
 document.getElementById("chart"),
-
 {
 type:"doughnut",
 data:{
@@ -372,11 +415,12 @@ labels:["Đã lấy","Chưa lấy"],
 datasets:[{data:[0,0]}]
 }
 }
-
 )
+
+render()
+renderHistory()
 
 </script>
 
 </body>
-
-</html>p
+</html>
