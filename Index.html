@@ -1,21 +1,18 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Shipper PRO MAX</title>
+<title>Tool sprinter by caocuong</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
 <style>
 
 body{
-font-family:-apple-system,BlinkMacSystemFont,Segoe UI;
+font-family:-apple-system,BlinkMacSystemFont;
 background:#0f1220;
 color:white;
 margin:0;
@@ -24,9 +21,8 @@ margin:0;
 header{
 background:#ff0033;
 padding:14px;
-font-weight:bold;
 text-align:center;
-font-size:18px;
+font-weight:bold;
 }
 
 .container{
@@ -40,10 +36,9 @@ background:#181c2f;
 padding:12px;
 border-radius:12px;
 margin-bottom:12px;
-box-shadow:0 4px 10px rgba(0,0,0,0.3);
 }
 
-input,button{
+input,select,button{
 padding:9px;
 margin:4px;
 border:none;
@@ -53,46 +48,22 @@ border-radius:8px;
 button{
 background:#ff0033;
 color:white;
-cursor:pointer;
 }
 
-#reader{
-width:100%;
-}
-
-.item{
-background:#11142a;
+.shop{
+background:#10142a;
 padding:8px;
-margin-top:6px;
 border-radius:8px;
+margin-top:8px;
+}
+
+.order{
+background:#0c1022;
+padding:6px;
+margin-top:5px;
+border-radius:6px;
 display:flex;
 justify-content:space-between;
-align-items:center;
-}
-
-.done{
-color:#3cff74;
-}
-
-.todo{
-color:#ffc400;
-}
-
-#toast{
-position:fixed;
-top:15px;
-left:50%;
-transform:translateX(-50%);
-background:#222;
-padding:10px 15px;
-border-radius:8px;
-display:none;
-}
-
-.stats{
-margin-top:5px;
-font-size:14px;
-opacity:0.8;
 }
 
 </style>
@@ -115,9 +86,21 @@ opacity:0.8;
 
 <div class="card">
 
-<h3>➕ Thêm đơn</h3>
+<h3>🏪 Thêm shop</h3>
 
-<input id="codeInput" placeholder="Mã vận đơn">
+<input id="shopName" placeholder="Tên shop">
+
+<button onclick="addShop()">Thêm</button>
+
+</div>
+
+<div class="card">
+
+<h3>📦 Thêm đơn</h3>
+
+<select id="shopSelect"></select>
+
+<input id="orderCode" placeholder="Mã vận đơn">
 
 <button onclick="addOrder()">Thêm</button>
 
@@ -125,93 +108,43 @@ opacity:0.8;
 
 <div class="card">
 
-<h3>🔎 Tìm đơn</h3>
+<h3>📊 Danh sách shop</h3>
 
-<input id="search" placeholder="Tìm mã vận đơn" oninput="update()">
-
-</div>
-
-<div class="card">
-
-<h3>🔳 Tạo QR + Barcode</h3>
-
-<input id="genCode" placeholder="Nhập mã vận đơn">
-
-<button onclick="createCode()">Tạo</button>
-
-<h4>QR Code</h4>
-
-<div id="qrcode"></div>
-
-<h4>Barcode</h4>
-
-<svg id="barcode"></svg>
-
-</div>
-
-<div class="card">
-
-<h3>📊 Thống kê</h3>
-
-<div id="stats"></div>
-
-</div>
-
-<div class="card">
-
-<h3>📦 Danh sách đơn</h3>
-
-<div id="list"></div>
+<div id="shopList"></div>
 
 </div>
 
 </div>
-
-<div id="toast"></div>
 
 <script>
 
-let orders=JSON.parse(localStorage.getItem("orders")||"[]")
-
-let today=new Date().toLocaleDateString()
+let shops=JSON.parse(localStorage.getItem("shops")||"[]")
 
 function save(){
 
-localStorage.setItem("orders",JSON.stringify(orders))
+localStorage.setItem("shops",JSON.stringify(shops))
 
 }
 
-function toast(text){
+function addShop(){
 
-let box=document.getElementById("toast")
+let name=document.getElementById("shopName").value
 
-box.innerText=text
+shops.push({name:name,orders:[]})
 
-box.style.display="block"
+save()
 
-setTimeout(()=>{
-
-box.style.display="none"
-
-},1500)
+update()
 
 }
 
 function addOrder(){
 
-let code=document.getElementById("codeInput").value
+let shopIndex=document.getElementById("shopSelect").value
 
-if(!code)return
+let code=document.getElementById("orderCode").value
 
-orders.push({
-
-code:code,
-
-done:false,
-
-date:today
-
-})
+shops[shopIndex].orders.push(code)
 
 save()
 
@@ -219,27 +152,9 @@ update()
 
 }
 
-function toggle(code){
+function delOrder(shopIndex,code){
 
-let o=orders.find(x=>x.code===code)
-
-if(o){
-
-o.done=true
-
-toast("Đã lấy "+code)
-
-}
-
-save()
-
-update()
-
-}
-
-function del(code){
-
-orders=orders.filter(x=>x.code!==code)
+shops[shopIndex].orders=shops[shopIndex].orders.filter(x=>x!==code)
 
 save()
 
@@ -249,77 +164,41 @@ update()
 
 function update(){
 
-let list=document.getElementById("list")
+let list=document.getElementById("shopList")
 
-let search=document.getElementById("search").value.toLowerCase()
+let select=document.getElementById("shopSelect")
 
 list.innerHTML=""
 
-let done=0
+select.innerHTML=""
 
-let data=orders.filter(o=>o.code.toLowerCase().includes(search))
+shops.forEach((s,i)=>{
 
-data.forEach(o=>{
-
-if(o.done)done++
+select.innerHTML+=`<option value="${i}">${s.name}</option>`
 
 let div=document.createElement("div")
 
-div.className="item"
+div.className="shop"
 
-div.innerHTML=
+div.innerHTML=`<b>${s.name}</b> (${s.orders.length} đơn)`
 
-"<span>"+o.code+"</span>"+
+s.orders.forEach(code=>{
 
-"<span class='"+(o.done?"done":"todo")+"'>"+
+div.innerHTML+=`
 
-(o.done?"Đã lấy":"Chưa")+
+<div class="order">
 
-"</span>"+
+<span>${code}</span>
 
-"<button onclick=\"toggle('"+o.code+"')\">✓</button>"+
+<button onclick="delOrder(${i},'${code}')">X</button>
 
-"<button onclick=\"del('"+o.code+"')\">X</button>"
+</div>
+
+`
+
+})
 
 list.appendChild(div)
-
-})
-
-document.getElementById("stats").innerText=
-
-"Tổng: "+data.length+" | Đã lấy: "+done+" | Chưa: "+(data.length-done)
-
-}
-
-function createCode(){
-
-let text=document.getElementById("genCode").value
-
-if(!text)return
-
-let qr=document.getElementById("qrcode")
-
-qr.innerHTML=""
-
-new QRCode(qr,{
-
-text:text,
-
-width:200,
-
-height:200
-
-})
-
-JsBarcode("#barcode",text,{
-
-format:"CODE128",
-
-width:2,
-
-height:80,
-
-displayValue:true
 
 })
 
@@ -327,29 +206,9 @@ displayValue:true
 
 function onScanSuccess(code){
 
-let o=orders.find(x=>x.code===code)
+if(shops.length==0) return
 
-if(o){
-
-o.done=true
-
-toast("Đã lấy "+code)
-
-}else{
-
-orders.push({
-
-code:code,
-
-done:true,
-
-date:today
-
-})
-
-toast("Đơn mới "+code)
-
-}
+shops[0].orders.push(code)
 
 save()
 
@@ -361,13 +220,7 @@ let scanner=new Html5QrcodeScanner(
 
 "reader",
 
-{
-
-fps:30,
-
-qrbox:220
-
-}
+{fps:30,qrbox:220}
 
 )
 
@@ -378,4 +231,5 @@ update()
 </script>
 
 </body>
+
 </html>
