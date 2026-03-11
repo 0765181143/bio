@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Shipper Tool</title>
+<title>Shipper PRO MAX</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -15,40 +15,44 @@
 <style>
 
 body{
-font-family:Arial;
-background:#101323;
+font-family:-apple-system,BlinkMacSystemFont,Segoe UI;
+background:#0f1220;
 color:white;
 margin:0;
 }
 
 header{
 background:#ff0033;
-padding:12px;
+padding:14px;
 font-weight:bold;
 text-align:center;
+font-size:18px;
 }
 
 .container{
-padding:10px;
-max-width:600px;
+padding:12px;
+max-width:700px;
 margin:auto;
 }
 
 .card{
-background:#1a1e34;
+background:#181c2f;
 padding:12px;
-border-radius:10px;
+border-radius:12px;
 margin-bottom:12px;
+box-shadow:0 4px 10px rgba(0,0,0,0.3);
 }
 
 input,button{
-padding:8px;
+padding:9px;
 margin:4px;
 border:none;
-border-radius:6px;
+border-radius:8px;
 }
 
 button{
+background:#ff0033;
+color:white;
 cursor:pointer;
 }
 
@@ -60,18 +64,18 @@ width:100%;
 background:#11142a;
 padding:8px;
 margin-top:6px;
-border-radius:6px;
+border-radius:8px;
 display:flex;
 justify-content:space-between;
 align-items:center;
 }
 
 .done{
-color:#4cff6a;
+color:#3cff74;
 }
 
 .todo{
-color:#ffcc00;
+color:#ffc400;
 }
 
 #toast{
@@ -79,10 +83,16 @@ position:fixed;
 top:15px;
 left:50%;
 transform:translateX(-50%);
-background:#333;
+background:#222;
 padding:10px 15px;
 border-radius:8px;
 display:none;
+}
+
+.stats{
+margin-top:5px;
+font-size:14px;
+opacity:0.8;
 }
 
 </style>
@@ -91,7 +101,7 @@ display:none;
 
 <body>
 
-<header>Shipper Tool</header>
+<header>Shipper PRO MAX</header>
 
 <div class="container">
 
@@ -105,11 +115,19 @@ display:none;
 
 <div class="card">
 
-<h3>➕ Thêm mã vận đơn</h3>
+<h3>➕ Thêm đơn</h3>
 
-<input id="codeInput" placeholder="Nhập mã vận đơn">
+<input id="codeInput" placeholder="Mã vận đơn">
 
 <button onclick="addOrder()">Thêm</button>
+
+</div>
+
+<div class="card">
+
+<h3>🔎 Tìm đơn</h3>
+
+<input id="search" placeholder="Tìm mã vận đơn" oninput="update()">
 
 </div>
 
@@ -133,6 +151,14 @@ display:none;
 
 <div class="card">
 
+<h3>📊 Thống kê</h3>
+
+<div id="stats"></div>
+
+</div>
+
+<div class="card">
+
 <h3>📦 Danh sách đơn</h3>
 
 <div id="list"></div>
@@ -146,6 +172,8 @@ display:none;
 <script>
 
 let orders=JSON.parse(localStorage.getItem("orders")||"[]")
+
+let today=new Date().toLocaleDateString()
 
 function save(){
 
@@ -173,13 +201,15 @@ function addOrder(){
 
 let code=document.getElementById("codeInput").value
 
-if(!code) return
+if(!code)return
 
 orders.push({
 
 code:code,
 
-done:false
+done:false,
+
+date:today
 
 })
 
@@ -221,9 +251,17 @@ function update(){
 
 let list=document.getElementById("list")
 
+let search=document.getElementById("search").value.toLowerCase()
+
 list.innerHTML=""
 
-orders.forEach(o=>{
+let done=0
+
+let data=orders.filter(o=>o.code.toLowerCase().includes(search))
+
+data.forEach(o=>{
+
+if(o.done)done++
 
 let div=document.createElement("div")
 
@@ -247,13 +285,17 @@ list.appendChild(div)
 
 })
 
+document.getElementById("stats").innerText=
+
+"Tổng: "+data.length+" | Đã lấy: "+done+" | Chưa: "+(data.length-done)
+
 }
 
 function createCode(){
 
 let text=document.getElementById("genCode").value
 
-if(!text) return
+if(!text)return
 
 let qr=document.getElementById("qrcode")
 
@@ -299,7 +341,9 @@ orders.push({
 
 code:code,
 
-done:true
+done:true,
+
+date:today
 
 })
 
@@ -334,5 +378,4 @@ update()
 </script>
 
 </body>
-
 </html>
