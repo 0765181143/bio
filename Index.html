@@ -1,17 +1,14 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
 <title>SPRINTER</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-
-<link rel="apple-touch-icon" href="icon-192.png">
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
@@ -22,37 +19,45 @@
 
 body{
 margin:0;
+background:#0b1220;
 font-family:Arial;
-background:#0f172a;
 color:white;
 }
 
 header{
 background:#ff0033;
-padding:16px;
+padding:15px;
 text-align:center;
-font-size:22px;
+font-size:20px;
+font-weight:bold;
 }
 
-.section{
+.container{
+max-width:500px;
+margin:auto;
+padding:10px;
+}
+
+.card{
 background:#1e293b;
-margin:10px;
 padding:12px;
 border-radius:12px;
+margin-bottom:10px;
 }
 
 button{
 background:#ff0033;
 border:none;
+color:white;
 padding:8px 12px;
 border-radius:8px;
-color:white;
 }
 
 input{
 padding:8px;
 border-radius:8px;
 border:none;
+margin-top:6px;
 }
 
 .order{
@@ -62,20 +67,22 @@ padding:6px;
 border-bottom:1px solid #334155;
 }
 
+#reader{
+width:100%;
+margin-top:10px;
+}
+
 </style>
 
 </head>
 
 <body>
 
-<header>
+<header>SPRINTER Tool by Cao Cường</header>
 
-SPRINTER  
-Tool by Cao Cường
+<div class="container">
 
-</header>
-
-<div class="section">
+<div class="card">
 
 <h3>📷 Scan đơn</h3>
 
@@ -86,25 +93,25 @@ Tool by Cao Cường
 
 </div>
 
-<div class="section">
+<div class="card">
 
 <h3>➕ Thêm đơn</h3>
 
-<input id="manualCode" placeholder="Mã vận đơn">
+<input id="manual" placeholder="Mã vận đơn">
 
 <button onclick="addManual()">Thêm</button>
 
 </div>
 
-<div class="section">
+<div class="card">
 
 <h3>🔍 Tìm đơn</h3>
 
-<input id="search" onkeyup="searchOrder()" placeholder="Tìm mã">
+<input id="search" placeholder="Tìm mã" onkeyup="searchOrder()">
 
 </div>
 
-<div class="section">
+<div class="card">
 
 <h3>📦 Danh sách đơn</h3>
 
@@ -112,13 +119,13 @@ Tool by Cao Cường
 
 </div>
 
-<div class="section">
+<div class="card">
 
 <h3>🧾 Tạo QR + Barcode</h3>
 
-<input id="genCode" placeholder="Nhập mã">
+<input id="code" placeholder="Nhập mã">
 
-<button onclick="generate()">Tạo</button>
+<button onclick="createCode()">Tạo</button>
 
 <div id="qr"></div>
 
@@ -126,7 +133,7 @@ Tool by Cao Cường
 
 </div>
 
-<div class="section">
+<div class="card">
 
 <h3>📊 Thống kê</h3>
 
@@ -134,23 +141,27 @@ Tool by Cao Cường
 
 </div>
 
+</div>
+
 <script>
 
-let orders=JSON.parse(localStorage.orders||"[]")
+let orders=JSON.parse(localStorage.getItem("orders")||"[]")
 
 function save(){
-
-localStorage.orders=JSON.stringify(orders)
-
+localStorage.setItem("orders",JSON.stringify(orders))
 }
 
 function addOrder(code){
+
+if(!code)return
 
 let found=orders.find(o=>o.code==code)
 
 if(found){
 
 found.taken=true
+
+navigator.vibrate(200)
 
 }else{
 
@@ -162,8 +173,6 @@ date:new Date().toLocaleDateString()
 
 }
 
-navigator.vibrate(200)
-
 save()
 
 render()
@@ -172,7 +181,7 @@ render()
 
 function addManual(){
 
-let code=document.getElementById("manualCode").value
+let code=document.getElementById("manual").value
 
 addOrder(code)
 
@@ -201,16 +210,14 @@ let div=document.createElement("div")
 div.className="order"
 
 div.innerHTML=
-
 o.code+" "+(o.taken?"✅":"⏳")+
-
 `<button onclick="deleteOrder('${o.code}')">X</button>`
 
 box.appendChild(div)
 
 })
 
-updateDash()
+updateChart()
 
 }
 
@@ -226,6 +233,8 @@ orders.filter(o=>o.code.includes(key)).forEach(o=>{
 
 let div=document.createElement("div")
 
+div.className="order"
+
 div.innerText=o.code
 
 box.appendChild(div)
@@ -234,13 +243,17 @@ box.appendChild(div)
 
 }
 
-function generate(){
+function createCode(){
 
-let code=document.getElementById("genCode").value
+let code=document.getElementById("code").value
 
 document.getElementById("qr").innerHTML=""
 
-new QRCode(document.getElementById("qr"),code)
+new QRCode(document.getElementById("qr"),{
+text:code,
+width:200,
+height:200
+})
 
 JsBarcode("#barcode",code)
 
@@ -254,15 +267,22 @@ scanner=new Html5Qrcode("reader")
 
 scanner.start(
 {facingMode:"environment"},
-{fps:30,qrbox:250},
-code=>addOrder(code)
+{
+fps:30,
+qrbox:250
+},
+(code)=>{
+addOrder(code)
+}
 )
 
 }
 
 function stopScan(){
 
-if(scanner)scanner.stop()
+if(scanner){
+scanner.stop()
+}
 
 }
 
@@ -272,12 +292,14 @@ document.getElementById("chart"),
 type:"doughnut",
 data:{
 labels:["Đã lấy","Chưa lấy"],
-datasets:[{data:[0,0]}]
+datasets:[{
+data:[0,0]
+}]
 }
 }
 )
 
-function updateDash(){
+function updateChart(){
 
 let taken=orders.filter(o=>o.taken).length
 
@@ -292,5 +314,4 @@ render()
 </script>
 
 </body>
-
 </html>
