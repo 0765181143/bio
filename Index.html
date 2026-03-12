@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SPRINTER</title>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
@@ -24,13 +22,8 @@ color:white;
 header{
 background:#111827;
 padding:15px;
-display:flex;
-align-items:center;
-gap:10px;
-}
-
-header img{
-width:40px;
+font-size:20px;
+text-align:center;
 }
 
 .container{
@@ -50,14 +43,7 @@ border:none;
 padding:10px;
 border-radius:8px;
 color:white;
-}
-
-input{
-padding:10px;
-border-radius:8px;
-border:none;
-width:100%;
-margin-top:5px;
+margin:4px;
 }
 
 table{
@@ -70,155 +56,136 @@ padding:8px;
 border-bottom:1px solid #334155;
 }
 
-#reader{
+#scanner{
 width:100%;
+height:250px;
 }
 
-.badge{
-padding:4px 8px;
-border-radius:6px;
-font-size:12px;
-}
-
-.ok{
-background:#16a34a;
-}
-
-.wait{
-background:#f59e0b;
+input{
+padding:10px;
+border-radius:8px;
+border:none;
+width:100%;
+margin-top:6px;
 }
 
 </style>
-
 </head>
 
 <body>
 
-<header>
-<h2>SPRINTER</h2>
-</header>
+<header>SPRINTER</header>
 
 <div class="container">
 
 <div class="card">
-
-<h3>📷 Scan</h3>
-
-<div id="reader"></div>
-
+<h3>📷 AI Scan</h3>
+<div id="scanner"></div>
 <button onclick="startScan()">Start</button>
 <button onclick="stopScan()">Stop</button>
-
 </div>
 
 <div class="card">
-
 <h3>📋 Danh sách quét</h3>
-
 <table id="queue"></table>
-
 <button onclick="confirmScan()">Xác nhận</button>
-
 </div>
 
 <div class="card">
-
 <h3>📦 Đơn</h3>
-
 <table id="orders"></table>
-
 </div>
 
 <div class="card">
-
 <h3>📊 Dashboard</h3>
-
 <canvas id="chart"></canvas>
-
 </div>
 
 <div class="card">
-
 <h3>📦 Tạo QR / Barcode</h3>
-
 <input id="codeInput" placeholder="Nhập mã vận đơn">
-
 <button onclick="createCode()">Tạo</button>
-
+<br><br>
 <svg id="barcode"></svg>
-
+<br>
 <canvas id="qr"></canvas>
-
 </div>
 
 <div class="card">
-
 <h3>📍 Map shop</h3>
-
-<input id="shopAddress" placeholder="Nhập địa chỉ">
-
+<input id="shopAddress" placeholder="Nhập địa chỉ shop">
 <button onclick="openMap()">Mở map</button>
-
 </div>
 
 </div>
 
 <script>
 
-let scanner
 let queue=[]
 let orders=JSON.parse(localStorage.getItem("orders")||"[]")
 
+function beep(){
+let audio=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg")
+audio.play()
+navigator.vibrate(200)
+}
+
 function startScan(){
 
-scanner=new Html5Qrcode("reader")
+Quagga.init({
 
-scanner.start(
-{facingMode:"environment"},
-{
-fps:30,
-qrbox:{width:250,height:120}
+inputStream:{
+type:"LiveStream",
+target:document.querySelector('#scanner'),
+constraints:{
+facingMode:"environment",
+focusMode:"continuous"
+}
 },
-onScan
-)
+
+decoder:{
+readers:[
+"code_128_reader",
+"ean_reader",
+"ean_8_reader",
+"upc_reader",
+"qr_reader"
+]
+}
+
+},function(err){
+
+if(!err){
+Quagga.start()
+}
+
+})
+
+Quagga.onDetected(function(data){
+
+let code=data.codeResult.code
+
+beep()
+
+if(!queue.includes(code)){
+queue.push(code)
+drawQueue()
+}
+
+})
 
 }
 
 function stopScan(){
-
-if(scanner){
-scanner.stop()
+Quagga.stop()
 }
 
-}
-
-function beep(){
-
-let audio=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg")
-audio.play()
-
-}
-
-function onScan(code){
-
-navigator.vibrate(200)
-
-beep()
-
-queue.push(code)
-
-renderQueue()
-
-}
-
-function renderQueue(){
+function drawQueue(){
 
 let html=""
 
 queue.forEach(c=>{
-
 html+=`<tr><td>${c}</td></tr>`
-
 })
 
 document.getElementById("queue").innerHTML=html
@@ -257,21 +224,17 @@ function save(){
 
 localStorage.setItem("orders",JSON.stringify(orders))
 
-renderOrders()
+drawOrders()
 
 updateChart()
 
 }
 
-function renderOrders(){
+function drawOrders(){
 
 let html=""
 
 orders.forEach((o,i)=>{
-
-let status=o.status=="DA LAY"
-?'<span class="badge ok">ĐÃ LẤY</span>'
-:'<span class="badge wait">CHƯA LẤY</span>'
 
 html+=`
 
@@ -279,7 +242,7 @@ html+=`
 
 <td>${o.code}</td>
 
-<td>${status}</td>
+<td>${o.status}</td>
 
 <td>${o.date}</td>
 
@@ -340,12 +303,10 @@ window.open("https://www.google.com/maps/search/"+a)
 
 }
 
-renderOrders()
-
+drawOrders()
 updateChart()
 
 </script>
 
 </body>
 </html>
-
