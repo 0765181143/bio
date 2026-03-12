@@ -1,1 +1,351 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>SPRINTER</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+
+<style>
+
+body{
+margin:0;
+background:#0f172a;
+font-family:Arial;
+color:white;
+}
+
+header{
+background:#111827;
+padding:15px;
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+header img{
+width:40px;
+}
+
+.container{
+padding:10px;
+}
+
+.card{
+background:#1e293b;
+padding:15px;
+margin-bottom:12px;
+border-radius:12px;
+}
+
+button{
+background:#2563eb;
+border:none;
+padding:10px;
+border-radius:8px;
+color:white;
+}
+
+input{
+padding:10px;
+border-radius:8px;
+border:none;
+width:100%;
+margin-top:5px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+td{
+padding:8px;
+border-bottom:1px solid #334155;
+}
+
+#reader{
+width:100%;
+}
+
+.badge{
+padding:4px 8px;
+border-radius:6px;
+font-size:12px;
+}
+
+.ok{
+background:#16a34a;
+}
+
+.wait{
+background:#f59e0b;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+<h2>SPRINTER</h2>
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<h3>📷 Scan</h3>
+
+<div id="reader"></div>
+
+<button onclick="startScan()">Start</button>
+<button onclick="stopScan()">Stop</button>
+
+</div>
+
+<div class="card">
+
+<h3>📋 Danh sách quét</h3>
+
+<table id="queue"></table>
+
+<button onclick="confirmScan()">Xác nhận</button>
+
+</div>
+
+<div class="card">
+
+<h3>📦 Đơn</h3>
+
+<table id="orders"></table>
+
+</div>
+
+<div class="card">
+
+<h3>📊 Dashboard</h3>
+
+<canvas id="chart"></canvas>
+
+</div>
+
+<div class="card">
+
+<h3>📦 Tạo QR / Barcode</h3>
+
+<input id="codeInput" placeholder="Nhập mã vận đơn">
+
+<button onclick="createCode()">Tạo</button>
+
+<svg id="barcode"></svg>
+
+<canvas id="qr"></canvas>
+
+</div>
+
+<div class="card">
+
+<h3>📍 Map shop</h3>
+
+<input id="shopAddress" placeholder="Nhập địa chỉ">
+
+<button onclick="openMap()">Mở map</button>
+
+</div>
+
+</div>
+
+<script>
+
+let scanner
+let queue=[]
+let orders=JSON.parse(localStorage.getItem("orders")||"[]")
+
+function startScan(){
+
+scanner=new Html5Qrcode("reader")
+
+scanner.start(
+{facingMode:"environment"},
+{
+fps:30,
+qrbox:{width:250,height:120}
+},
+onScan
+)
+
+}
+
+function stopScan(){
+
+if(scanner){
+scanner.stop()
+}
+
+}
+
+function beep(){
+
+let audio=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg")
+audio.play()
+
+}
+
+function onScan(code){
+
+navigator.vibrate(200)
+
+beep()
+
+queue.push(code)
+
+renderQueue()
+
+}
+
+function renderQueue(){
+
+let html=""
+
+queue.forEach(c=>{
+
+html+=`<tr><td>${c}</td></tr>`
+
+})
+
+document.getElementById("queue").innerHTML=html
+
+}
+
+function confirmScan(){
+
+queue.forEach(code=>{
+
+let o=orders.find(a=>a.code==code)
+
+if(!o){
+
+orders.push({
+code:code,
+status:"CHUA LAY",
+date:new Date().toLocaleDateString()
+})
+
+}else{
+
+o.status="DA LAY"
+
+}
+
+})
+
+queue=[]
+
+save()
+
+}
+
+function save(){
+
+localStorage.setItem("orders",JSON.stringify(orders))
+
+renderOrders()
+
+updateChart()
+
+}
+
+function renderOrders(){
+
+let html=""
+
+orders.forEach((o,i)=>{
+
+let status=o.status=="DA LAY"
+?'<span class="badge ok">ĐÃ LẤY</span>'
+:'<span class="badge wait">CHƯA LẤY</span>'
+
+html+=`
+
+<tr>
+
+<td>${o.code}</td>
+
+<td>${status}</td>
+
+<td>${o.date}</td>
+
+<td>
+<button onclick="delOrder(${i})">Xóa</button>
+</td>
+
+</tr>
+
+`
+
+})
+
+document.getElementById("orders").innerHTML=html
+
+}
+
+function delOrder(i){
+
+orders.splice(i,1)
+
+save()
+
+}
+
+function updateChart(){
+
+let da=orders.filter(o=>o.status=="DA LAY").length
+let chua=orders.filter(o=>o.status=="CHUA LAY").length
+
+new Chart(
+document.getElementById("chart"),
+{
+type:"doughnut",
+data:{
+labels:["Đã lấy","Chưa lấy"],
+datasets:[{data:[da,chua]}]
+}
+})
+
+}
+
+function createCode(){
+
+let code=document.getElementById("codeInput").value
+
+JsBarcode("#barcode",code)
+
+QRCode.toCanvas(document.getElementById("qr"),code)
+
+}
+
+function openMap(){
+
+let a=document.getElementById("shopAddress").value
+
+window.open("https://www.google.com/maps/search/"+a)
+
+}
+
+renderOrders()
+
+updateChart()
+
+</script>
+
+</body>
+</html>
 
