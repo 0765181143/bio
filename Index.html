@@ -2,82 +2,91 @@
 <html>
 <head>
 
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>SPRINTER ULTRA PRO MAX</title>
+<meta charset="UTF-8">
+<title>Sprinter by C.Cường</title>
 
 <link rel="stylesheet" href="style.css">
 
-<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/1041/1041888.png">
-
 <script src="https://unpkg.com/@zxing/library@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
 
 <body>
 
 <header>
-
-<img src="https://cdn-icons-png.flaticon.com/512/1041/1041888.png">
-
-<h2>SPRINTER ULTRA PRO MAX</h2>
-
+<img src="logo.png" class="logo">
+<h1>Sprinter by C.Cường</h1>
 </header>
 
-<div class="menu">
+<div class="container">
 
-<button onclick="openPage('scan')">📷 Scan</button>
-<button onclick="openPage('orders')">📦 Orders</button>
-<button onclick="openPage('dashboard')">📊 Dashboard</button>
-<button onclick="openPage('qr')">🔳 QR</button>
-<button onclick="printLabel()">🧾 Print</button>
-<button onclick="openMap()">📍 Map</button>
-
-</div>
-
-<div id="scan" class="page">
+<h2>Scanner</h2>
 
 <video id="video"></video>
 
-<p id="scanResult">Waiting scan...</p>
+<div class="controls">
+
+<button onclick="toggleFlash()">Flash</button>
+<button onclick="startScanner()">Start Scan</button>
 
 </div>
 
-<div id="orders" class="page">
+<div id="notify"></div>
 
-<input id="manualCode" placeholder="Manual code">
+<h2>Danh sách quét</h2>
 
-<button onclick="addManual()">Add</button>
+<ul id="scanList"></ul>
 
-<table id="ordersTable"></table>
+<button onclick="confirmOrders()">Xác nhận đơn</button>
 
-</div>
+<hr>
 
-<div id="dashboard" class="page">
+<h2>Tạo Barcode</h2>
+
+<input id="barcodeText">
+
+<button onclick="createBarcode()">Tạo</button>
+
+<svg id="barcode"></svg>
+
+<h2>Tạo QR</h2>
+
+<canvas id="qr"></canvas>
+
+<button onclick="createQR()">Tạo QR</button>
+
+<hr>
+
+<h2>In tem vận đơn</h2>
+
+<input id="printCode">
+
+<button onclick="printLabel()">In tem</button>
+
+<hr>
+
+<h2>Dashboard</h2>
 
 <canvas id="chart"></canvas>
 
-</div>
+<hr>
 
-<div id="qr" class="page">
+<h2>Lịch sử hoạt động</h2>
 
-<input id="qrText">
-
-<button onclick="makeQR()">QR</button>
-
-<button onclick="makeBarcode()">Barcode</button>
-
-<canvas id="qrCanvas"></canvas>
-
-<svg id="barcode"></svg>
+<ul id="historyList"></ul>
 
 </div>
 
 <script src="scanner.js"></script>
-<script src="system.js"></script>
+<script src="orders.js"></script>
+<script src="barcode.js"></script>
+<script src="print.js"></script>
+<script src="dashboard.js"></script>
+<script src="shop.js"></script>
+<script src="history.js"></script>
 
 </body>
 </html>
