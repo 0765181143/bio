@@ -2,32 +2,41 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>AI Face Detect</title>
+<title>AI Face Camera</title>
 
-<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <style>
 
 body{
-background:#111;
+background:#0f172a;
 color:white;
-text-align:center;
 font-family:Arial;
+text-align:center;
+}
+
+h1{
+margin-top:20px;
 }
 
 video{
-border:3px solid #00ffcc;
-border-radius:10px;
 margin-top:20px;
+border:3px solid #22c55e;
+border-radius:10px;
 }
 
 button{
-padding:10px 20px;
 margin-top:20px;
-background:#00ffcc;
+padding:12px 25px;
+font-size:16px;
+background:#22c55e;
 border:none;
-border-radius:6px;
+border-radius:8px;
 cursor:pointer;
+}
+
+button:hover{
+background:#16a34a;
 }
 
 </style>
@@ -36,9 +45,9 @@ cursor:pointer;
 
 <body>
 
-<h2>AI Face Detection</h2>
+<h1>AI Face Detection</h1>
 
-<button onclick="startCamera()">Start Camera</button>
+<button onclick="start()">Start Camera</button>
 
 <br>
 
@@ -48,13 +57,13 @@ cursor:pointer;
 
 const video = document.getElementById("video")
 
-async function startCamera(){
+async function start(){
 
 await faceapi.nets.tinyFaceDetector.loadFromUri(
-"https://cdn.jsdelivr.net/npm/face-api.js/models"
+"https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights"
 )
 
-navigator.mediaDevices.getUserMedia({video:{}})
+navigator.mediaDevices.getUserMedia({video:true})
 .then(stream=>{
 video.srcObject = stream
 })
@@ -67,12 +76,12 @@ const canvas = faceapi.createCanvasFromMedia(video)
 
 document.body.append(canvas)
 
-const displaySize={
+const size={
 width:video.width,
 height:video.height
 }
 
-faceapi.matchDimensions(canvas,displaySize)
+faceapi.matchDimensions(canvas,size)
 
 setInterval(async()=>{
 
@@ -81,7 +90,7 @@ video,
 new faceapi.TinyFaceDetectorOptions()
 )
 
-const resized = faceapi.resizeResults(detections,displaySize)
+const resized = faceapi.resizeResults(detections,size)
 
 canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height)
 
