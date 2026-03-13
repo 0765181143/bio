@@ -1,92 +1,97 @@
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta charset="UTF-8">
-<title>Sprinter by C.Cường</title>
+<title>AI Face Detect</title>
 
-<link rel="stylesheet" href="style.css">
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 
-<script src="https://unpkg.com/@zxing/library@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+
+body{
+background:#111;
+color:white;
+text-align:center;
+font-family:Arial;
+}
+
+video{
+border:3px solid #00ffcc;
+border-radius:10px;
+margin-top:20px;
+}
+
+button{
+padding:10px 20px;
+margin-top:20px;
+background:#00ffcc;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+
+</style>
 
 </head>
 
 <body>
 
-<header>
-<img src="logo.png" class="logo">
-<h1>Sprinter by C.Cường</h1>
-</header>
+<h2>AI Face Detection</h2>
 
-<div class="container">
+<button onclick="startCamera()">Start Camera</button>
 
-<h2>Scanner</h2>
+<br>
 
-<video id="video"></video>
+<video id="video" width="720" height="560" autoplay muted></video>
 
-<div class="controls">
+<script>
 
-<button onclick="toggleFlash()">Flash</button>
-<button onclick="startScanner()">Start Scan</button>
+const video = document.getElementById("video")
 
-</div>
+async function startCamera(){
 
-<div id="notify"></div>
+await faceapi.nets.tinyFaceDetector.loadFromUri(
+"https://cdn.jsdelivr.net/npm/face-api.js/models"
+)
 
-<h2>Danh sách quét</h2>
+navigator.mediaDevices.getUserMedia({video:{}})
+.then(stream=>{
+video.srcObject = stream
+})
 
-<ul id="scanList"></ul>
+}
 
-<button onclick="confirmOrders()">Xác nhận đơn</button>
+video.addEventListener("play",()=>{
 
-<hr>
+const canvas = faceapi.createCanvasFromMedia(video)
 
-<h2>Tạo Barcode</h2>
+document.body.append(canvas)
 
-<input id="barcodeText">
+const displaySize={
+width:video.width,
+height:video.height
+}
 
-<button onclick="createBarcode()">Tạo</button>
+faceapi.matchDimensions(canvas,displaySize)
 
-<svg id="barcode"></svg>
+setInterval(async()=>{
 
-<h2>Tạo QR</h2>
+const detections = await faceapi.detectAllFaces(
+video,
+new faceapi.TinyFaceDetectorOptions()
+)
 
-<canvas id="qr"></canvas>
+const resized = faceapi.resizeResults(detections,displaySize)
 
-<button onclick="createQR()">Tạo QR</button>
+canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height)
 
-<hr>
+faceapi.draw.drawDetections(canvas,resized)
 
-<h2>In tem vận đơn</h2>
+},200)
 
-<input id="printCode">
+})
 
-<button onclick="printLabel()">In tem</button>
-
-<hr>
-
-<h2>Dashboard</h2>
-
-<canvas id="chart"></canvas>
-
-<hr>
-
-<h2>Lịch sử hoạt động</h2>
-
-<ul id="historyList"></ul>
-
-</div>
-
-<script src="scanner.js"></script>
-<script src="orders.js"></script>
-<script src="barcode.js"></script>
-<script src="print.js"></script>
-<script src="dashboard.js"></script>
-<script src="shop.js"></script>
-<script src="history.js"></script>
+</script>
 
 </body>
 </html>
